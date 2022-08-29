@@ -44,7 +44,21 @@ RUN apt update && apt install -y --no-install-recommends \
     ca-certificates \
     xz-utils \
     iproute2 \
-  && rm -rf /var/lib/apt/lists/*
+    binfmt-support \
+    qemu-user-static \
+  && rm -rf /var/lib/apt/lists/* \
+  && \
+    mv /usr/bin/qemu-aarch64-static /usr/bin/qemu-aarch64 && \
+    mv /usr/bin/qemu-arm-static /usr/bin/qemu-arm && \
+    mv /usr/bin/qemu-ppc64le-static /usr/bin/qemu-ppc64le && \
+    mv /usr/bin/qemu-s390x-static /usr/bin/qemu-s390x
+ENV DOCKER_CLI_EXPERIMENTAL=enabled
+# Install buildx plugin
+RUN mkdir -p ~/.docker/cli-plugins && \
+    curl -s https://api.github.com/repos/docker/buildx/releases/latest | \
+        grep "browser_download_url.*linux-amd64" | cut -d : -f 2,3 | tr -d '"' | \
+    xargs curl -L -o ~/.docker/cli-plugins/docker-buildx && \
+    chmod a+x ~/.docker/cli-plugins/docker-buildx
 
 COPY --from=builder /assets /opt/resource
 RUN ln -s /opt/resource/ecr-login /usr/local/bin/docker-credential-ecr-login

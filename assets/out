@@ -81,7 +81,7 @@ build_args=$(jq -r '.params.build_args // {}' < $payload)
 build_args_file=$(jq -r '.params.build_args_file // ""' < $payload)
 labels=$(jq -r '.params.labels // {}' < $payload)
 labels_file=$(jq -r '.params.labels_file // ""' < $payload)
-
+buildx_platforms=$(jq -r '.params.buildx_platforms // "linux/amd64,linux/arm64"' < $payload)
 
 tag_name=""
 if [ -n "$tag_params" ]; then
@@ -261,7 +261,21 @@ elif [ -n "$build" ]; then
   # NOTE: deactivate amazon-ecr-credential-helper so that builds go through with the DOCKER_BUILDKIT set
   cp ~/.docker/config.json ~/.docker/config.json.bak
   cat <<< "$(jq 'del(.credsStore)' ~/.docker/config.json)" > ~/.docker/config.json
-  docker build -t "${repository}:${tag_name}" "${target[@]}" "${expanded_build_args[@]}" "${expanded_labels[@]}" "${ssh_args[@]}" -f "$dockerfile" $cache_from "$build"
+  #docker build -t "${repository}:${tag_name}" "${target[@]}" "${expanded_build_args[@]}" "${expanded_labels[@]}" "${ssh_args[@]}" -f "$dockerfile" $cache_from "$build"
+  update-binfmts --enable
+  docker buildx create --use
+  docker buildx inspect --bootstrap
+  docker buildx build \
+    --platform "${buildx_platforms}" \
+    --tag "${repository}:${tag_name}" \
+    --file "${dockerfile}" \
+    "${target[@]}" \
+    "${expanded_build_args[@]}" \
+    "${expanded_labels[@]}" \
+    "${build}" \
+    "${ssh_args[@]}" \
+    --push
+
   mv ~/.docker/config.json.bak ~/.docker/config.json # This restores the credsStore: ecr-login to config.json if needed
 
 elif [ -n "$load_file" ]; then

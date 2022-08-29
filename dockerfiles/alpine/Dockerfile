@@ -32,6 +32,12 @@ RUN apk --no-cache add \
       util-linux \
       tar \
     ;
+ENV DOCKER_CLI_EXPERIMENTAL=enabled
+RUN mkdir -p ~/.docker/cli-plugins && \
+    curl -s https://api.github.com/repos/docker/buildx/releases/latest | \
+        grep "browser_download_url.*linux-amd64" | cut -d : -f 2,3 | tr -d '"' | \
+    xargs curl -L -o ~/.docker/cli-plugins/docker-buildx && \
+    chmod a+x ~/.docker/cli-plugins/docker-buildx
 COPY --from=builder /assets /opt/resource
 RUN ln -s /opt/resource/ecr-login /usr/local/bin/docker-credential-ecr-login
 
